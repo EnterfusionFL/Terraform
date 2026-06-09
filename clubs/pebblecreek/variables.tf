@@ -92,3 +92,23 @@ variable "timezone" {
   type    = string
   default = "America/New_York"
 }
+
+variable "backup_alerts_topic_name" {
+  type = string
+}
+
+variable "backup_alert_email" {
+  type = string
+}
+
+variable "backup_job_failure_rule_name" {
+  type = string
+}
+
+variable "copy_job_failure_rule_name" {
+  type = string
+}
+
+variable "restore_job_failure_rule_name" {
+  type = string
+}

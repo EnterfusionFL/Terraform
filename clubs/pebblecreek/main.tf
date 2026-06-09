@@ -184,3 +184,100 @@ resource "aws_backup_selection" "monthly_ec2_instances" {
     }
   }
 }
+
+###### SNS ######
+
+resource "aws_sns_topic" "backup_failure_alerts" {
+  name         = var.backup_alerts_topic_name
+  display_name = var.backup_alerts_topic_name
+}
+
+resource "aws_sns_topic_subscription" "backup_failure_email" {
+  topic_arn = aws_sns_topic.backup_failure_alerts.arn
+  protocol  = "email"
+  endpoint  = var.backup_alert_email
+}
+
+###### EventBridge ######
+
+resource "aws_cloudwatch_event_rule" "backup_job_failure" {
+  name        = var.backup_job_failure_rule_name
+  description = "Capture failed, aborted, or expired AWS Backup backup jobs"
+
+  event_pattern = jsonencode({
+    source      = ["aws.backup"]
+    detail-type = ["Backup Job State Change"]
+    detail = {
+      state = ["FAILED", "ABORTED", "EXPIRED"]
+    }
+  })
+
+
+}
+
+resource "aws_cloudwatch_event_target" "backup_job_failure_to_sns" {
+  rule      = aws_cloudwatch_event_rule.backup_job_failure.name
+  target_id = "BackupFailureAlerts"
+  arn       = aws_sns_topic.backup_failure_alerts.arn
+}
+
+resource "aws_cloudwatch_event_rule" "copy_job_failure" {
+  name        = var.copy_job_failure_rule_name
+  description = "Capture failed, aborted, or expired AWS Backup copy jobs"
+
+  event_pattern = jsonencode({
+    source      = ["aws.backup"]
+    detail-type = ["Copy Job State Change"]
+    detail = {
+      state = ["FAILED", "ABORTED", "EXPIRED"]
+    }
+  })
+
+
+}
+
+resource "aws_cloudwatch_event_target" "copy_job_failure_to_sns" {
+  rule      = aws_cloudwatch_event_rule.copy_job_failure.name
+  target_id = "CopyFailureAlerts"
+  arn       = aws_sns_topic.backup_failure_alerts.arn
+}
+
+resource "aws_cloudwatch_event_rule" "restore_job_failure" {
+  name        = var.restore_job_failure_rule_name
+  description = "Capture failed, aborted, or expired AWS Backup restore jobs"
+
+  event_pattern = jsonencode({
+    source      = ["aws.backup"]
+    detail-type = ["Restore Job State Change"]
+    detail = {
+      status = ["FAILED", "ABORTED", "EXPIRED"]
+    }
+  })
+
+
+}
+
+resource "aws_cloudwatch_event_target" "restore_job_failure_to_sns" {
+  rule      = aws_cloudwatch_event_rule.restore_job_failure.name
+  target_id = "RestoreFailureAlerts"
+  arn       = aws_sns_topic.backup_failure_alerts.arn
+}
+
+resource "aws_sns_topic_policy" "allow_eventbridge_publish" {
+  arn = aws_sns_topic.backup_failure_alerts.arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowEventBridgeToPublish"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sns:Publish"
+        Resource = aws_sns_topic.backup_failure_alerts.arn
+      }
+    ]
+  })
+}

@@ -49,3 +49,19 @@ output "daily_assignment_name" {
 output "monthly_assignment_name" {
   value = aws_backup_selection.monthly_ec2_instances.name
 }
+
+output "backup_alerts_topic_name" {
+  value = aws_sns_topic.backup_failure_alerts.name
+}
+
+output "backup_job_failure_rule_arn" {
+  value = aws_cloudwatch_event_rule.backup_job_failure.arn
+}
+
+output "copy_job_failure_rule_arn" {
+  value = aws_cloudwatch_event_rule.copy_job_failure.arn
+}
+
+output "restore_job_failure_rule_arn" {
+  value = aws_cloudwatch_event_rule.restore_job_failure.arn
+}
